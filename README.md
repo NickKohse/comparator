@@ -20,3 +20,4 @@ The name of the alternative followed by exactly as many numeric value cells as t
 ## Improvements
 - Add non linear relationships between best and worst attribute values
 - Add the possibility the define a peak in the middle of a set of attributes, as opposed to just the highest or lowest
+- Fix formatting so final output is aligned

@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require_relative 'helpers'
+require_relative 'column.rb'
 
 include Helpers
 
@@ -19,18 +20,22 @@ end
 # Read in file
 read_legend = false
 alternatives = Hash.new
-weights = Array.new
+columns = Array.new
 
 File.read(ARGV[0]).each_line do |line|
     parts = line.split(',')
     if !read_legend
         for i in 1..parts.length - 1 do
-            weight = parts[i].split('[')[1].scan(/\d+/).first
+            weight_part = parts[i].split('[')[1]
+            weight = weight_part.scan(/\d+/).first
+
             if weight == nil
                 puts "Weight at index #{i} improperly specified"
                 exit 2
             end
-            weights.push(weight.to_i)
+
+            negate = weight_part.include?('^')
+            columns.push(Column.new(weight.to_i, negate))
         end
         read_legend = true
     else
@@ -43,7 +48,7 @@ File.read(ARGV[0]).each_line do |line|
                 values.push(parts[i].to_f)    
             end
         end
-        if values.length != weights.length
+        if values.length != columns.length
             puts "Alternative #{parts[0]} has #{values.length} values specified, but #{weights.length} weights were given"
             exit 2
         end
@@ -52,32 +57,29 @@ File.read(ARGV[0]).each_line do |line|
 end
 
 # Determine max and mins
-maxs = Array.new
-mins = Array.new
-for i in 0..weights.length - 1 do
-    min = nil
-    max = nil
+for i in 0..columns.length - 1
     alternatives.each do |_, arr|
-        if min == nil || min > arr[i]
-            min = arr[i]
+        if columns[i].min == nil || columns[i].min > arr[i]
+            columns[i].min = arr[i]
         end
 
-        if max == nil || max < arr[i]
-            max = arr[i]
+        if columns[i].max == nil || columns[i].max < arr[i]
+            columns[i].max = arr[i]
         end
     end
-    maxs.push(max)
-    mins.push(min)
 end
 
 # Do the math and print results
+total_score = columns.inject(0) {|sum,x| sum += x.weight}
 
-puts "Scores: (out of #{weights.reduce(:+)} possible points)"
+puts "Scores: (out of #{total_score} possible points)"
 
 alternatives.each do |name, arr|
     score = 0
-    for i in 0..weights.length - 1  do
-        score += (linear_interpolate(mins[i], maxs[i], arr[i]) * weights[i])
+    for i in 0..columns.length - 1  do
+        interpolated = (linear_interpolate(columns[i].min, columns[i].max, arr[i]))
+        interpolated = 1 - interpolated if columns[i].negate
+        score += interpolated * columns[i].weight
     end
     puts "#{name}: #{score.round(3)}"
 end
