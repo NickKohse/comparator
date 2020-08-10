@@ -21,6 +21,7 @@ end
 read_legend = false
 alternatives = Hash.new
 columns = Array.new
+max_name_len = 0
 
 File.read(ARGV[0]).each_line do |line|
     parts = line.split(',')
@@ -52,6 +53,7 @@ File.read(ARGV[0]).each_line do |line|
             puts "Alternative #{parts[0]} has #{values.length} values specified, but #{weights.length} weights were given"
             exit 2
         end
+        max_name_len = parts[0].length if parts[0].length > max_name_len
         alternatives[parts[0]] = values
     end
 end
@@ -81,5 +83,7 @@ alternatives.each do |name, arr|
         interpolated = 1 - interpolated if columns[i].negate
         score += interpolated * columns[i].weight
     end
-    puts "#{name}: #{score.round(3)}"
+    print " " * (max_name_len - name.length )
+    print "#{name}: "
+    print "#{score.round(3)}\n"
 end
